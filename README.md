@@ -223,7 +223,7 @@ gateway 10.69.1.1
 ![](./Attachments/screen-toolkit-annotate-2.webp)
 
 ### 3. Set Resolver
->Dari config masing-masing client sebelumnya, selanjutnya kita tambahkan `dns-nameserver` agar client bisa mengakses domain.
+>Dari config masing-masing client sebelumnya, selanjutnya kita tambahkan config dns, agar client bisa mengakses domain.
 ```
 #.....config yang sebelumnya
 dns-nameservers 192.168.122.1
@@ -301,6 +301,27 @@ dig @10.69.3.11 prab.k11.com +short # harus 10.69.3.10
 
 <img width="646" height="241" alt="image" src="https://github.com/user-attachments/assets/eb115a3f-6170-4b3f-b1c2-f94d9b1d92ec" />
 
+Selanjutnya tambahkan config terkait dns pada masing-masing node:
+```
+up echo "nameserver 10.69.3.10" > /etc/resolv.conf
+up echo "nameserver 10.69.3.11" >> /etc/resolv.conf
+```
+
+contoh config pada alpha:
+```
+auto lo
+iface lo inet loopback
+
+auto eth0
+iface eth0 inet static
+address 10.69.1.10
+netmask 255.255.255.0
+gateway 10.69.1.1
+dns-nameservers 10.69.3.10 10.69.3.11 192.168.122.1
+up echo "nameserver 10.69.3.10" > /etc/resolv.conf
+up echo "nameserver 10.69.3.11" >> /etc/resolv.conf
+up echo "nameserver 192.168.122.1" >> /etc/resolv.conf
+```
 
 ### 5. Domain dan Hostname
 `setup-hosts.sh`
