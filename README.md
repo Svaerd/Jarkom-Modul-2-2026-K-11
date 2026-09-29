@@ -515,4 +515,20 @@ cat /etc/resolv.conf
 
 
 
-### 6. 
+### 6. Cek Zona Transfer
+
+Untuk memastikan tedd telah menerima salinan zona terbaru dari prabb, jalankan script dibawah ini pada container tedd:
+```sh
+#!/bin/bash
+echo "Membandingkan Serial SOA"
+dig -4 @10.69.3.10 k11.com SOA +short
+dig -4 @10.69.3.11 k11.com SOA +short
+
+echo ""
+echo "Test Zone Transfer"
+dig -4 @10.69.3.10 k11.com AXFR +short | head -5
+
+echo ""
+echo "Cek authoritative di Tedd"
+dig @10.69.3.11 k11.com
+```
