@@ -512,9 +512,6 @@ cat /etc/resolv.conf
 <img width="997" height="856" alt="image" src="https://github.com/user-attachments/assets/c5ac08b6-c623-4f63-a340-4e1e82996869" />
 
 
-
-
-
 ### 6. Cek Zona Transfer
 
 Untuk memastikan tedd telah menerima salinan zona terbaru dari prabb, jalankan script dibawah ini pada container tedd:
@@ -532,3 +529,82 @@ echo ""
 echo "Cek authoritative di Tedd"
 dig @10.69.3.11 k11.com
 ```
+![](./Attachments/screen-toolkit-annotate-6.webp)
+### 7. Penambahan A record
+Untuk menambahkan A record untuk vault.k11.com serta core.k11.com, tambahkan beberapa konfigurasi tambahan pada `/etc/bind/db.k11.com`. Untuk melakukan itu, disini kami menambahkan beberapa line tambahan pada script `installbind.sh`
+```sh
+...
+molly   IN      A       10.69.3.15
+rootkit IN      A       10.69.3.1
+
+; ============================================
+; Soal 7: Vault, Core, WWW, Static
+; ============================================
+; vault -> obladi + desmond (load balance)
+vault   IN      A       10.69.3.12
+vault   IN      A       10.69.3.13
+;
+; core -> oblada + molly (load balance)
+core    IN      A       10.69.3.14
+core    IN      A       10.69.3.15
+;
+; CNAME alias
+www     IN      CNAME   penny.k11.com.
+static  IN      CNAME   abbey.k11.com.
+EOF
+...
+```
+
+Selain itu, serialnya juga diganti dari awalnya `2025010101` menjadi `2025010102`:
+```sh
+...
+    cat > /etc/bind/db.k11.com <<'EOF'
+$TTL    604800
+@       IN      SOA     prab.k11.com. admin.k11.com. (
+                              2025010102 ; Serial
+                              3600       ; Refresh
+...
+```
+
+Selanjutnya kita akan melakukan verifikasi pada node `alpha` dan `delta`, bahwa semua hostname sudah terresolve dengan benar, menggunakan script di bawah:
+`cekhostname.sh`
+```sh
+#!/bin/bash
+PRAB=10.69.3.10
+TEDD=10.69.3.11
+
+# Fungsi untuk mengurangi pengulangan perintah dig
+cek() {
+    echo "$1"
+    echo -n "Prab : "; dig -4 @$PRAB $2 +short | tr '\n' ' '; echo
+    echo -n "Tedd : "; dig -4 @$TEDD $2 +short | tr '\n' ' '; echo
+    echo ""
+}
+
+echo "CHECK SOAL 7"
+echo ""
+
+echo "Serial SOA"
+echo -n "Prab : "; dig -4 @$PRAB k11.com SOA +short | awk '{print $3}'
+echo -n "Tedd : "; dig -4 @$TEDD k11.com SOA +short | awk '{print $3}'
+echo ""
+
+# Memanggil fungsi untuk record A, CNAME, dan Apex
+cek "vault.k11.com" vault.k11.com
+cek "core.k11.com" core.k11.com
+cek "www.k11.com" www.k11.com
+cek "static.k11.com" static.k11.com
+cek "Apex k11.com" k11.com
+
+echo "Authoritative"
+echo -n "Prab : "; dig -4 @$PRAB k11.com | grep -o "flags: [^;]*"
+echo -n "Tedd : "; dig -4 @$TEDD k11.com | grep -o "flags: [^;]*"
+echo ""
+
+echo "Resolver lokal"
+grep nameserver /etc/resolv.conf
+echo ""
+```
+
+![](./Attachments/screen-toolkit-annotate-4.webp)
+![](./Attachments/screen-toolkit-annotate-5.webp)
