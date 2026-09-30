@@ -1,14 +1,16 @@
 # Jarkom-Modul-2-2026-K-11
 
 ## Anggota Kelompok
-| Nama                | NRP        | Pembagian Soal   | Pembagian Jobdesk                                                      |
-| ------------------- | ---------- | ---------------- | ---------------------------------------------------------------------- |
-| Hasheemi Rafsanjani | 5027251015 | 7-14, 16, 18, 20 | Main Solver (menyelesaikan sebagian besar tantangan/soal)              |
-| Husam Danish        | 5027251060 | 1-6, 15, 17, 19  | Main Editor (Resolve git conflict dan melakukan editing serta koreksi) |
+
+| Nama                | NRP        | Pembagian Soal | Pembagian Jobdesk                                                      |
+| ------------------- | ---------- | -------------- | ---------------------------------------------------------------------- |
+| Hasheemi Rafsanjani | 5027251015 |                | Main Solver (menyelesaikan sebagian besar tantangan/soal)              |
+| Husam Danish        | 5027251060 |                | Main Editor (Resolve git conflict dan melakukan editing serta koreksi) |
 
 ## Laporan Shadow Net Operation
 
 ### Glosarium Entitas
+
 ```
 rootkit : router sentral (gateway)
 alpha, beta, gamma : klien sayap kiri (pengamat)
@@ -22,16 +24,19 @@ oblada, molly : repositori web dinamis
 Aturan resolver awal : setiap tokoh (host) non-router menambahkan nameserver 192.168.122.1 saat UI aktif (untuk memudahkan akses & instalasi paket yang dibutuhkan di awal).
 Penataan ulang resolver : setelah DNS internal hidup (soal 5), urutkan menjadi prab → tedd → 192.168.122.1 pada semua non-router.
 Area vault : Kelompok repository web statis yang terdiri dari node obladi dan desmond.
-Area core: Kelompok repository web dinamis yang terdiri dari node oblada dan molly. 
+Area core: Kelompok repository web dinamis yang terdiri dari node oblada dan molly.
 Kanonik : Hostname utama yang menjadi identitas publik layanan. Semua akses lewat IP atau nama lain akan dialihkan secara permanen ke hostname ini (misal: www.<xxxx>.com).
 Disarankan menggunakan >= php8.4-fpm.
 ```
-### 1. The Mesh - set up topology
+
+### 1. The Mesh - set up topology & IP
+
 ![](./Attachments/image-1.webp)
 
-### 2.  Set IP VPC
+### 2. Set IP VPC
 
 Router config:
+
 ```
 auto eth0
 iface eth0 inet dhcp
@@ -72,7 +77,9 @@ netmask 255.255.255.0
 ```
 
 > Config masing-masing clients: assigning Clients IP
+
 - delta
+
 ```
 auto lo
 iface lo inet loopback
@@ -83,7 +90,9 @@ address 10.69.5.10
 netmask 255.255.255.0
 gateway 10.69.5.1
 ```
+
 - epsilon
+
 ```
 auto lo
 iface lo inet loopback
@@ -96,6 +105,7 @@ gateway 10.69.5.1
 ```
 
 - penny
+
 ```
 auto lo
 iface lo inet loopback
@@ -108,6 +118,7 @@ gateway 10.69.4.1
 ```
 
 - molly
+
 ```
 auto lo
 iface lo inet loopback
@@ -118,7 +129,9 @@ address 10.69.3.15
 netmask 255.255.255.0
 gateway 10.69.3.1
 ```
+
 - oblada
+
 ```
 auto lo
 iface lo inet loopback
@@ -129,7 +142,9 @@ address 10.69.3.14
 netmask 255.255.255.0
 gateway 10.69.3.1
 ```
+
 - desmond
+
 ```
 auto lo
 iface lo inet loopback
@@ -140,7 +155,9 @@ address 10.69.3.13
 netmask 255.255.255.0
 gateway 10.69.3.1
 ```
+
 - obladi
+
 ```
 auto lo
 iface lo inet loopback
@@ -151,7 +168,9 @@ address 10.69.3.12
 netmask 255.255.255.0
 gateway 10.69.3.1
 ```
+
 - redd
+
 ```
 auto lo
 iface lo inet loopback
@@ -162,7 +181,9 @@ address 10.69.3.11
 netmask 255.255.255.0
 gateway 10.69.3.1
 ```
+
 - prab
+
 ```
 auto lo
 iface lo inet loopback
@@ -175,6 +196,7 @@ gateway 10.69.3.1
 ```
 
 - abbey
+
 ```
 auto lo
 iface lo inet loopback
@@ -187,6 +209,7 @@ gateway 10.69.2.1
 ```
 
 - gamma
+
 ```
 auto lo
 iface lo inet loopback
@@ -197,7 +220,9 @@ address 10.69.1.12
 netmask 255.255.255.0
 gateway 10.69.1.1
 ```
+
 - beta
+
 ```
 auto lo
 iface lo inet loopback
@@ -208,7 +233,9 @@ address 10.69.1.11
 netmask 255.255.255.0
 gateway 10.69.1.1
 ```
+
 - alpha
+
 ```
 auto lo
 iface lo inet loopback
@@ -223,7 +250,9 @@ gateway 10.69.1.1
 ![](./Attachments/screen-toolkit-annotate-2.webp)
 
 ### 3. Set Resolver
->Dari config masing-masing client sebelumnya, selanjutnya kita tambahkan config dns, agar client bisa mengakses domain.
+
+> Dari config masing-masing client sebelumnya, selanjutnya kita tambahkan config dns, agar client bisa mengakses domain.
+
 ```
 #.....config yang sebelumnya
 dns-nameservers 192.168.122.1
@@ -294,6 +323,7 @@ dig -4 @localhost k11.com SOA +short
 ```
 
 Verifikasi dari client (alpha), setelah resolver di set di `/etc/network/interfaces` sesuai section 3:
+
 ```
 dig @10.69.3.10 k11.com +short     # harus 10.69.4.10
 dig @10.69.3.11 prab.k11.com +short # harus 10.69.3.10
@@ -302,12 +332,14 @@ dig @10.69.3.11 prab.k11.com +short # harus 10.69.3.10
 <img width="646" height="241" alt="image" src="https://github.com/user-attachments/assets/eb115a3f-6170-4b3f-b1c2-f94d9b1d92ec" />
 
 Selanjutnya tambahkan config terkait dns pada masing-masing node:
+
 ```
 up echo "nameserver 10.69.3.10" > /etc/resolv.conf
 up echo "nameserver 10.69.3.11" >> /etc/resolv.conf
 ```
 
 contoh config pada alpha:
+
 ```
 auto lo
 iface lo inet loopback
@@ -437,8 +469,7 @@ dig -4 @localhost k11.com +short
 
 echo "[DONE] $ROLE siap."
 
-````
-
+```
 
 `setup-hosts.sh`
 
@@ -507,14 +538,15 @@ echo "[OK] FQDN: $(hostname -f)"
 echo "[OK] Resolver:"
 cat /etc/resolv.conf
 ```
+
 <img width="958" height="403" alt="image" src="https://github.com/user-attachments/assets/79f2a92c-e07f-41d6-9eb6-3814f1364da2" />
 
 <img width="997" height="856" alt="image" src="https://github.com/user-attachments/assets/c5ac08b6-c623-4f63-a340-4e1e82996869" />
 
-
 ### 6. Cek Zona Transfer
 
 Untuk memastikan tedd telah menerima salinan zona terbaru dari prabb, jalankan script dibawah ini pada container tedd:
+
 ```sh
 #!/bin/bash
 echo "Membandingkan Serial SOA"
@@ -529,9 +561,13 @@ echo ""
 echo "Cek authoritative di Tedd"
 dig @10.69.3.11 k11.com
 ```
+
 ![](./Attachments/screen-toolkit-annotate-6.webp)
+
 ### 7. Penambahan A record
+
 Untuk menambahkan A record untuk vault.k11.com serta core.k11.com, tambahkan beberapa konfigurasi tambahan pada `/etc/bind/db.k11.com`. Untuk melakukan itu, disini kami menambahkan beberapa line tambahan pada script `installbind.sh`
+
 ```sh
 ...
 molly   IN      A       10.69.3.15
@@ -556,6 +592,7 @@ EOF
 ```
 
 Selain itu, serialnya juga diganti dari awalnya `2025010101` menjadi `2025010102`:
+
 ```sh
 ...
     cat > /etc/bind/db.k11.com <<'EOF'
@@ -568,6 +605,7 @@ $TTL    604800
 
 Selanjutnya kita akan melakukan verifikasi pada node `alpha` dan `delta`, bahwa semua hostname sudah terresolve dengan benar, menggunakan script di bawah:
 `cekhostname.sh`
+
 ```sh
 #!/bin/bash
 PRAB=10.69.3.10
@@ -609,8 +647,8 @@ echo ""
 ![](./Attachments/screen-toolkit-annotate-4.webp)
 ![](./Attachments/screen-toolkit-annotate-5.webp)
 
-
 # Reverse Zone
+
 Dengan objektif mendeklarasikan reverse zone atau ketika `dig` dengan IP , dia akan mengembalikan hostname dan subdmonain, fungsi tersebut harus dideklarasikan di `prab`, dengan script sebelumnya , maka ditambahkan di `if [ "$ROLE" = "prab" ]`
 untuk menambahkan bind ke `10.69.2 - 10.69.4` menuju ke hostname nya
 
@@ -723,4 +761,3 @@ Jika sudah muncul seperti HTML dan ada `index of /`
 maka sudah berhasil
 
 <img width="1894" height="706" alt="image" src="https://github.com/user-attachments/assets/2822f7f2-402e-49f6-a990-e983bece691c" />
-
