@@ -761,3 +761,124 @@ Jika sudah muncul seperti HTML dan ada `index of /`
 maka sudah berhasil
 
 <img width="1894" height="706" alt="image" src="https://github.com/user-attachments/assets/2822f7f2-402e-49f6-a990-e983bece691c" />
+
+
+# Setup Web Dinamis
+
+Install nginx dan PHP 
+
+```sh
+apt update 
+apt install -y nginx php-fpm php-cli
+```
+
+Jalankan PHP-FM nya
+
+```sh
+service php8.4-fpm start  
+service php8.4-fpm statu
+```
+
+Buat dan konfigurasi webserver dinamis PHP nya
+
+
+```sh
+
+mkdir -p /var/www/core
+
+cat > /var/www/core/index.php <<'EOF'
+<?php
+$host = gethostname();
+$ip   = $_SERVER['SERVER_ADDR'] ?? 'unknown';
+?>
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>Beranda</title></head>
+<body>
+<h1>Beranda</h1>
+<p>Hostname: <?= htmlspecialchars($host) ?></p>
+<p>IP: <?= htmlspecialchars($ip) ?></p>
+<p>Waktu: <?= date('Y-m-d H:i:s') ?></p>
+<ul>
+<li><a href="/">Beranda</a></li>
+<li><a href="/profil">Profil</a></li>
+</ul>
+</body>
+</html>
+EOF
+
+cat > /var/www/core/profil.php <<'EOF'
+<?php
+$host = gethostname();
+$ip   = $_SERVER['SERVER_ADDR'] ?? 'unknown';
+?>
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>Profil</title></head>
+<body>
+<h1>Profil</h1>
+<p>Nama: Mahasiswa K11</p>
+<p>NIM: 12345678</p>
+<p>Hostname: <?= htmlspecialchars($host) ?></p>
+<p>IP: <?= htmlspecialchars($ip) ?></p>
+<p>URI: <?= htmlspecialchars($_SERVER['REQUEST_URI']) ?></p>
+<p><a href="/">Kembali</a></p>
+</body>
+</html>
+EOF
+
+chown -R www-data:www-data /var/www/core
+
+cat > /etc/nginx/sites-available/core.k11.com <<EOF
+server {
+    listen 80;
+    server_name core.k11.com oblada.k11.com molly.k11.com;
+    root /var/www/core;
+    index index.php index.html;
+
+    location / {
+        try_files \$uri \$uri/ =404;
+    }
+
+    location = /profil {
+        try_files \$uri /profil.php?\$query_string;
+    }
+
+    location ~ \.php\$ {
+        include snippets/fastcgi-php.conf;
+        fastcgi_pass unix:/run/php/php${PHPVER}-fpm.sock;
+        fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
+        include fastcgi_params;
+    }
+}
+EOF
+
+```
+
+
+Restart PHP dan Nginx nya
+
+```sh
+nginx -t
+service php8.4-fpm restart
+service nginx restart
+```
+
+
+Test koneksi menggunakan curl pada beberapa node client, misal alpha
+
+```sh
+# Beranda
+curl -s http://core.k11.com/ | head -20
+
+# Profil clean URL
+curl -s http://core.k11.com/profil | head -20
+
+# Cek status code
+curl -s -o /dev/null -w "Beranda: %{http_code}\n" http://core.k11.com/
+curl -s -o /dev/null -w "Profil : %{http_code}\n" http://core.k11.com/profil
+```
+
+<img width="1212" height="664" alt="image" src="https://github.com/user-attachments/assets/d07e3f01-cd2d-4d92-9121-5d984e13363b" />
+
+
