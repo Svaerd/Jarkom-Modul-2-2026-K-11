@@ -664,3 +664,63 @@ EOF
 
 Untuk memastikannya dilakukan dig -x dengan IP dari reverse zone yang telah di setting
 <img width="1473" height="1078" alt="image" src="https://github.com/user-attachments/assets/552deadd-3488-4647-a91d-e9f4834dfd9e" />
+
+# Setup Web Statis
+
+Pertama install web server apache pada obladi dan desmond
+
+```sh
+apt update
+apt install -y apache2
+```
+
+Kemudian buat direktori `/var/www/html` dan isi beberapa file uji coba
+
+```sh
+mkdir -p /var/www/html/arsip
+
+echo "Ini arsip rahasia k11.com — file 1" > /var/www/html/arsip/dokumen1.txt
+echo "Ini arsip rahasia k11.com — file 2" > /var/www/html/arsip/dokumen2.txt
+echo "Laporan bulanan" > /var/www/html/arsip/laporan.txt
+
+ls -l /var/www/html/arsip/
+```
+
+Aktifkan fitur autoindex / directory listing untuk menampilkan semua file
+
+```sh
+
+nano /etc/apache2/conf-available/arsip.conf
+
+#isi dengan
+<Directory /var/www/html/arsip>
+    Options Indexes FollowSymLinks
+    AllowOverride None
+    Require all granted
+    IndexOptions FancyIndexing HTMLTable NameWidth=* Charset=UTF-8
+</Directory>
+```
+
+Jalankan Apache
+
+```sh
+a2enconf arsip
+apache2ctl configtest
+service apache2 restart
+```
+
+Di obladi host maupun client seperti alpha,etc, test menggunakan curl
+
+```sh
+dig -4 @10.69.3.10 vault.k11.com +short
+
+curl -s http://localhost/arsip/ | head -30
+
+curl -s http://vault.k11.com/arsip/ | head -30
+```
+
+Jika sudah muncul seperti HTML dan ada `index of /`
+maka sudah berhasil
+
+<img width="1894" height="706" alt="image" src="https://github.com/user-attachments/assets/2822f7f2-402e-49f6-a990-e983bece691c" />
+
