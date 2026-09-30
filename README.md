@@ -608,3 +608,59 @@ echo ""
 
 ![](./Attachments/screen-toolkit-annotate-4.webp)
 ![](./Attachments/screen-toolkit-annotate-5.webp)
+
+
+# Reverse Zone
+Dengan objektif mendeklarasikan reverse zone atau ketika `dig` dengan IP , dia akan mengembalikan hostname dan subdmonain, fungsi tersebut harus dideklarasikan di `prab`, dengan script sebelumnya , maka ditambahkan di `if [ "$ROLE" = "prab" ]`
+untuk menambahkan bind ke `10.69.2 - 10.69.4` menuju ke hostname nya
+
+```sh
+# Reverse zones
+cat >> /etc/bind/named.conf.local <<'EOF'
+
+zone "2.69.10.in-addr.arpa" { type master; file "/etc/bind/db.10.69.2"; notify yes; also-notify { 10.69.3.11; }; allow-transfer { 10.69.3.11; }; };
+zone "3.69.10.in-addr.arpa" { type master; file "/etc/bind/db.10.69.3"; notify yes; also-notify { 10.69.3.11; }; allow-transfer { 10.69.3.11; }; };
+zone "4.69.10.in-addr.arpa" { type master; file "/etc/bind/db.10.69.4"; notify yes; also-notify { 10.69.3.11; }; allow-transfer { 10.69.3.11; }; };
+EOF
+
+cat > /etc/bind/db.10.69.2 <<'EOF'
+$TTL 604800
+@ IN SOA prab.k11.com. admin.k11.com. ( 2025010103 3600 1800 604800 86400 )
+@ IN NS prab.k11.com.
+@ IN NS tedd.k11.com.
+10 IN PTR abbey.k11.com.
+EOF
+
+cat > /etc/bind/db.10.69.3 <<'EOF'
+$TTL 604800
+@ IN SOA prab.k11.com. admin.k11.com. ( 2025010103 3600 1800 604800 86400 )
+@ IN NS prab.k11.com.
+@ IN NS tedd.k11.com.
+12 IN PTR vault.k11.com.
+13 IN PTR vault.k11.com.
+14 IN PTR core.k11.com.
+15 IN PTR core.k11.com.
+EOF
+
+cat > /etc/bind/db.10.69.4 <<'EOF'
+$TTL 604800
+@ IN SOA prab.k11.com. admin.k11.com. ( 2025010103 3600 1800 604800 86400 )
+@ IN NS prab.k11.com.
+@ IN NS tedd.k11.com.
+10 IN PTR penny.k11.com.
+EOF
+```
+
+Tambahkan konfigurasi zone slave nya juga di `tedd`
+
+```sh
+cat >> /etc/bind/named.conf.local <<'EOF'
+
+zone "2.69.10.in-addr.arpa" { type slave; file "/var/cache/bind/db.10.69.2"; masters { 10.69.3.10; }; };
+zone "3.69.10.in-addr.arpa" { type slave; file "/var/cache/bind/db.10.69.3"; masters { 10.69.3.10; }; };
+zone "4.69.10.in-addr.arpa" { type slave; file "/var/cache/bind/db.10.69.4"; masters { 10.69.3.10; }; };
+EOF
+```
+
+Untuk memastikannya dilakukan dig -x dengan IP dari reverse zone yang telah di setting
+<img width="1473" height="1078" alt="image" src="https://github.com/user-attachments/assets/552deadd-3488-4647-a91d-e9f4834dfd9e" />
