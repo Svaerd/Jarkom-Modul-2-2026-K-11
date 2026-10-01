@@ -882,3 +882,113 @@ curl -s -o /dev/null -w "Profil : %{http_code}\n" http://core.k11.com/profil
 <img width="1212" height="664" alt="image" src="https://github.com/user-attachments/assets/d07e3f01-cd2d-4d92-9121-5d984e13363b" />
 
 
+# Setup Reverse Proxy Server
+
+Pertama install web server apache dan atau nginx pada penny dan abbey
+
+```sh
+#penny
+apt update
+apt install -y apache2 apache2-utils
+
+a2enmod proxy proxy_http proxy_balancer lbmethod_byrequests headers
+
+
+#abbey
+apt update
+apt install -y nginx
+```
+
+Kemudian setting untuk IP yang akan di forward ke mana sesuai dengan bahasa config masing masing
+
+*Penny*
+```sh
+
+cat > /etc/apache2/sites-available/000-default.conf <<'EOF'
+<VirtualHost *:80>
+    ServerName www.k11.com
+    ServerName penny.k11.com
+
+    <Proxy balancer://vaultcluster>
+        BalancerMember http://10.69.3.12:80
+        BalancerMember http://10.69.3.13:80
+        ProxySet lbmethod=byrequests
+
+        RequestHeader set X-Real-IP "expr=%{REMOTE_ADDR}"
+        RequestHeader set X-Forwarded-For "expr=%{REMOTE_ADDR}"
+    </Proxy>
+
+    ProxyPreserveHost On
+    ProxyPass        /  balancer://vaultcluster/
+    ProxyPassReverse /  balancer://vaultcluster/
+    ProxyPassReverse /  http://10.69.3.12/
+    ProxyPassReverse /  http://10.69.3.13/
+</VirtualHost>
+EOF
+
+echo "ServerName penny.k11.com" > /etc/apache2/conf-available/servername.conf
+a2enconf servername
+
+apache2ctl configtest
+service apache2 restart
+
+```
+
+
+*Abbey*
+
+```sh
+cat > /etc/nginx/sites-available/core-proxy.conf <<'EOF'
+upstream corecluster {
+    server 10.69.3.14:80;
+    server 10.69.3.15:80;
+}
+
+server {
+    listen 80;
+    server_name static.k11.com abbey.k11.com;
+
+    location / {
+        proxy_pass http://corecluster;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+EOF
+
+ln -sf /etc/nginx/sites-available/core-proxy.conf /etc/nginx/sites-enabled/core-proxy.conf
+rm -f /etc/nginx/sites-enabled/default
+
+nginx -t
+service nginx restart
+```
+
+
+Kemudian untuk cek IP , saya menggunakan info.php yang akan mendapatkan header dari server
+
+```sh
+
+ cat > /var/www/[core atau /html/arsip]/info.php <<'EOF'
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>Info Core</title></head>
+<body>
+<?php
+echo "Host: " . ($_SERVER['HTTP_HOST'] ?? '-') . "<br>";
+echo "X-Real-IP: " . ($_SERVER['HTTP_X_REAL_IP'] ?? '-') . "<br>";
+echo "X-Forwarded-For: " . ($_SERVER['HTTP_X_FORWARDED_FOR'] ?? '-') . "<br>";
+echo "Remote: " . ($_SERVER['REMOTE_ADDR'] ?? '-') . "<br>";
+echo "Node: " . gethostname() . "<br>";
+?>
+</body>
+</html>
+EOF
+
+chown www-data:www-data /var/www/[core atau /html/arsip]/info.php2
+
+```
+Cek pada client alpha
+
+<img width="1228" height="1078" alt="image" src="https://github.com/user-attachments/assets/5b81064b-d6d6-440b-8abb-4ace3bf1eae7" />
