@@ -1176,4 +1176,150 @@ tail -1 /var/log/apache2/access.log   # vault
 tail -1 /var/log/nginx/access.log     # core
 ```
 
+# Setup Eternal dan Orion
 
+seperti hal nya pada setup webserver sebelumnya 
+permintaan soal yaitu di penny akan menambahkan jalur path khusus `/eternal` yang mengacu ke `/var/www/eternal` yang bisa merender web dinamis PHP
+kemudian di abbey akan ada path `/orion` dengan direktori `/var/www/orion` yang hanya merender statis html
+
+**Penny Eternal**
+
+buat direktori dan file 
+
+```sh
+
+mkdir -p /var/www/eternal
+
+cat > /var/www/eternal/index.php <<'EOF'
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>Eternal</title></head>
+<body>
+<?php
+echo "Eternal OK<br>";
+echo "Host: " . ($_SERVER['HTTP_HOST'] ?? '-') . "<br>";
+echo "Node: " . gethostname() . "<br>";
+echo "PHP: " . phpversion() . "<br>";
+?>
+</body>
+</html>
+EOF
+
+echo "Halo dari /eternal" > /var/www/eternal/info.txt
+chown -R www-data:www-data /var/www/eternal
+```
+
+install dulu php nya kalau belum
+
+```sh
+apt install -y libapache2-mod-php
+a2enmod php*
+
+```
+
+perbaru config apache dan tambahkan path ke `/var/www/eternal`
+
+```sh
+Alias /eternal /var/www/eternal
+
+<Directory /var/www/eternal>
+    Options Indexes FollowSymLinks
+    AllowOverride None
+    Require all granted
+    DirectoryIndex index.php index.html
+</Directory>
+
+# ...
+
+ProxyPass        /eternal !
+ProxyPass        /  balancer://vaultcluster/
+```
+restart webserver
+
+```sh
+
+apache2ctl configtest
+service apache2 restart
+```
+
+**Abbey**
+
+buat direktori dan filenya
+
+```sh
+
+mkdir -p /var/www/orion
+echo "<h1>Orion OK</h1>" > /var/www/orion/index.html
+echo "File statis orion" > /var/www/orion/data.txt
+chown -R www-data:www-data /var/www/orion
+```
+
+atur kembali confignya
+
+```sh
+upstream corecluster {
+    server 10.69.3.14:80;
+    server 10.69.3.15:80;
+}
+
+server {
+    listen 80;
+    server_name static.k11.com;
+
+    location /orion/ {
+        alias /var/www/orion/;
+        autoindex on;
+        index index.html;
+    }
+
+    location / {
+        proxy_pass http://corecluster;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+}
+
+server {
+    listen 80;
+    server_name abbey.k11.com 10.69.2.10;
+
+    location /orion/ {
+        alias /var/www/orion/;
+        autoindex on;
+        index index.html;
+    }
+
+    location / {
+        return 302 http://static.k11.com$request_uri;
+    }
+}
+```
+
+reload nginx
+
+```sh
+nginx -t
+service nginx reload
+```
+
+
+cek curl di alpha
+
+```sh
+
+# /eternal 
+curl -s http://www.k11.com/eternal/
+
+curl -s http://www.k11.com/eternal/info.txt
+
+#/orion
+curl -s http://static.k11.com/orion/
+curl -s http://static.k11.com/orion/data.txt
+curl -s -o /dev/null -w "%{http_code}\n" http://static.k11.com/
+
+curl -sI http://abbey.k11.com/ | head -2
+
+```
+
+<img width="1104" height="618" alt="image" src="https://github.com/user-attachments/assets/b576c262-1a29-4f6d-a946-0d2731120a2f" />
