@@ -285,7 +285,7 @@ options {
 };
 EOF
 
-cat > /etc/bind/named.conf.local <<EOF
+cat >> /etc/bind/named.conf.local <<EOF
 zone "k11.com" {
     type master;
     file "/etc/bind/db.k11.com";
@@ -1337,6 +1337,8 @@ curl http://www.k11.com
 
 Jalankan script `apachebench.sh` pada salah satu node client, misalkan disini dijalankan pada alpha
 ```sh
+#!/bin/bash
+
 apt update
 apt install -y apache2-utils
 
@@ -1345,4 +1347,31 @@ ab -n 250 -c 10 http://static.k11.com/
 ```
 
 ![](./Attachments/screen-toolkit-annotate-7.webp)
+![](./Attachments/screen-toolkit-annotate-8.webp)
 
+### 17. TXT record for clients
+
+Run script `txtrecord.sh` pada node dns server (prab/tedd)
+```sh
+#!/bin/bash
+
+cat >> /etc/bind/db.k11.com <<'EOF'
+;soal 17
+alpha   IN  TXT "alpha"
+beta    IN  TXT "beta"
+gamma   IN  TXT "gamma"
+delta   IN  TXT "delta"
+epsilon IN  TXT "epsilon"
+EOF
+
+service named restart
+```
+
+kemudian, test apakah TXT record sudah berhasil ditambahkan menggunakan `nslookup` pada node client
+```sh
+nslookup -type=TXT beta.k11.com
+```
+
+![](./Attachments/image-2.webp)
+
+### 18. Fake IP
