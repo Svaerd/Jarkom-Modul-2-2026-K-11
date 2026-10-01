@@ -1050,4 +1050,69 @@ menghasilkan
 
 <img width="1330" height="511" alt="image" src="https://github.com/user-attachments/assets/b5627bd1-a4e7-4218-9860-4df7b5feb79c" />
 
+# Redirect 301 & 302 ketika IP dan Host subdomain
+
+Edit `/etc/apache2/sites-available/000-default.conf` di node penny
+dengan menambahkan
+
+```sh
+    RewriteEngine On
+    RewriteCond %{HTTP_HOST} ^10\.69\.4\.10$ [OR]
+    RewriteCond %{HTTP_HOST} ^penny\.k11\.com$ [NC]
+    RewriteRule ^/(.*)$ http://www.k11.com/$1 [R=301,L]
+
+```
+yaitu rewriteengine yang mengatur redirect baik permanen maupun temporal pada apache dengan mendefinisikan rule dan condition nya, ketentuan soal di penny adalah 301 moved permanennly
+
+perbarui konfigurasi
+
+```sh
+a2enmod rewrite
+apache2ctl configtest
+service apache2 restart
+```
+
+
+kemudian di abbey settingnya cukup berbeda namun simpel yaitu di file `/etc/nginx/sites-available/core-proxy.conf` tambahkan server listen
+
+```nginx
+server {
+    listen 80;
+    server_name abbey.k11.com 10.69.2.10;
+
+    # Redirect sementara (302) ke static.k11.com
+    return 302 http://static.k11.com$request_uri;
+}
+```
+dengan me return http code 302 dan memforwardnya ke static.k11.com
+
+restart nginx
+
+```sh
+nginx -t
+service nginx reload
+```
+
+setelah semua telah diubah confignya , coba test pada node alpha 
+
+```sh
+# cek penny dan ip nya
+curl -sI http://10.69.4.10/arsip/ | head -3
+
+curl -sI http://penny.k11.com/arsip/ | head -3
+
+curl -sI http://www.k11.com/arsip/ | head -3
+
+
+# cek abbey dan ipnya
+curl -sI http://10.69.2.10/ | head -3
+
+curl -sI http://abbey.k11.com/ | head -3
+
+curl -sI http://static.k11.com/ | head -3
+
+```
+<img width="1078" height="795" alt="image" src="https://github.com/user-attachments/assets/c0db6c9f-6dca-4c74-acef-ac8ec5955e13" />
+
+sudah terbukti dengan keluar http code 301 pada penny dan 302 pada abbey
 
