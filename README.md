@@ -647,7 +647,7 @@ echo ""
 ![](./Attachments/screen-toolkit-annotate-4.webp)
 ![](./Attachments/screen-toolkit-annotate-5.webp)
 
-# Reverse Zone
+### 8. Reverse Zone
 
 Dengan objektif mendeklarasikan reverse zone atau ketika `dig` dengan IP , dia akan mengembalikan hostname dan subdmonain, fungsi tersebut harus dideklarasikan di `prab`, dengan script sebelumnya , maka ditambahkan di `if [ "$ROLE" = "prab" ]`
 untuk menambahkan bind ke `10.69.2 - 10.69.4` menuju ke hostname nya
@@ -700,10 +700,10 @@ zone "4.69.10.in-addr.arpa" { type slave; file "/var/cache/bind/db.10.69.4"; mas
 EOF
 ```
 
-Untuk memastikannya dilakukan dig -x dengan IP dari reverse zone yang telah di setting
+Untuk memastikannya dilakukan `dig -x` dengan IP dari reverse zone yang telah di setting
 <img width="1473" height="1078" alt="image" src="https://github.com/user-attachments/assets/552deadd-3488-4647-a91d-e9f4834dfd9e" />
 
-# Setup Web Statis
+### 9. Setup Web Statis
 
 Pertama install web server apache pada obladi dan desmond
 
@@ -727,10 +727,12 @@ ls -l /var/www/html/arsip/
 Aktifkan fitur autoindex / directory listing untuk menampilkan semua file
 
 ```sh
-
 nano /etc/apache2/conf-available/arsip.conf
+```
 
-#isi dengan
+> Isi dengan:
+
+```apache
 <Directory /var/www/html/arsip>
     Options Indexes FollowSymLinks
     AllowOverride None
@@ -739,7 +741,7 @@ nano /etc/apache2/conf-available/arsip.conf
 </Directory>
 ```
 
-Jalankan Apache
+> Jalankan Apache
 
 ```sh
 a2enconf arsip
@@ -747,7 +749,7 @@ apache2ctl configtest
 service apache2 restart
 ```
 
-Di obladi host maupun client seperti alpha,etc, test menggunakan curl
+> Di obladi host maupun client seperti alpha,etc, test menggunakan curl
 
 ```sh
 dig -4 @10.69.3.10 vault.k11.com +short
@@ -763,7 +765,7 @@ maka sudah berhasil
 <img width="1894" height="706" alt="image" src="https://github.com/user-attachments/assets/2822f7f2-402e-49f6-a990-e983bece691c" />
 
 
-# Setup Web Dinamis
+### 10. Setup Web Dinamis
 
 Install nginx dan PHP 
 
@@ -882,7 +884,7 @@ curl -s -o /dev/null -w "Profil : %{http_code}\n" http://core.k11.com/profil
 <img width="1212" height="664" alt="image" src="https://github.com/user-attachments/assets/d07e3f01-cd2d-4d92-9121-5d984e13363b" />
 
 
-# Setup Reverse Proxy Server
+### 11. Setup Reverse Proxy
 
 Pertama install web server apache dan atau nginx pada penny dan abbey
 
@@ -993,7 +995,7 @@ Cek pada client alpha
 
 <img width="1228" height="1078" alt="image" src="https://github.com/user-attachments/assets/5b81064b-d6d6-440b-8abb-4ace3bf1eae7" />
 
-# Setup Admin dan Password pada node Penny
+### 12. Setup Admin dan Password pada node Penny
 
 Aktifkan apache tools untuk authentication
 
@@ -1050,7 +1052,7 @@ menghasilkan
 
 <img width="1330" height="511" alt="image" src="https://github.com/user-attachments/assets/b5627bd1-a4e7-4218-9860-4df7b5feb79c" />
 
-# Redirect 301 & 302 ketika IP dan Host subdomain
+### 13. Redirect 301 & 302 ketika IP dan Host subdomain
 
 Edit `/etc/apache2/sites-available/000-default.conf` di node penny
 dengan menambahkan
@@ -1117,7 +1119,7 @@ curl -sI http://static.k11.com/ | head -3
 sudah terbukti dengan keluar http code 301 pada penny dan 302 pada abbey
 
 
-# Real IP Log
+### 14. Real IP Log
 
 Objektifnya yaitu agar apache log dan nginx log mencatat IP real dari client asli, bukan dari proxy , berdasarkan soal sebelumnya header X-1P dan X-Forward akan ditampilkan di alpha misal iya menampilkan IP dari proxy misal 10.69.4.10 dari penny, namun di soal ini diharapkan untuk menampilkan IP asli clientnya
 
@@ -1176,7 +1178,7 @@ tail -1 /var/log/apache2/access.log   # vault
 tail -1 /var/log/nginx/access.log     # core
 ```
 
-# Setup Eternal dan Orion
+### 15. Setup Eternal dan Orion
 
 seperti hal nya pada setup webserver sebelumnya 
 permintaan soal yaitu di penny akan menambahkan jalur path khusus `/eternal` yang mengacu ke `/var/www/eternal` yang bisa merender web dinamis PHP
@@ -1323,3 +1325,11 @@ curl -sI http://abbey.k11.com/ | head -2
 ```
 
 <img width="1104" height="618" alt="image" src="https://github.com/user-attachments/assets/b576c262-1a29-4f6d-a946-0d2731120a2f" />
+
+Terakhir, cek bahwa kedua gerbang proxy sudah siap dengan menggunakan `curl` melalui node client:
+
+```sh
+curl http://www.k11.com
+```
+
+![](./Attachments/screen-toolkit-annotate.webp)
