@@ -992,3 +992,62 @@ chown www-data:www-data /var/www/[core atau /html/arsip]/info.php2
 Cek pada client alpha
 
 <img width="1228" height="1078" alt="image" src="https://github.com/user-attachments/assets/5b81064b-d6d6-440b-8abb-4ace3bf1eae7" />
+
+# Setup Admin dan Password pada node Penny
+
+Aktifkan apache tools untuk authentication
+
+```sh
+a2enmod proxy proxy_http proxy_balancer lbmethod_byrequests headers auth_basic authn_file
+```
+
+kemudian ubah konfigurasi , tambahkan basic auth di file `/etc/apache2/sites-available/000-default.conf`
+
+```sh
+ Alias /admin /var/www/admin
+
+    <Directory /var/www/admin>
+        AuthType Basic
+        AuthName "Ruang Rahasia Admin dunia"
+        AuthUserFile /etc/apache2/.htpasswd
+        Require valid-user
+    </Directory>
+
+#allcode same as before
+ ProxyPass        /admin !
+
+
+```
+
+Kemudian restart apache 
+
+```sh
+apache2ctl configtest
+service apache2 restart
+```
+
+Pada salah satu node client , alpha misal , cek
+
+```sh
+# no auth 401
+curl -s -o /dev/null -w "Tanpa auth: %{http_code}\n" http://www.k11.com/admin/
+
+# Password salah expected 401
+curl -s -o /dev/null -w "Salah: %{http_code}\n" -u prabs:wrong http://www.k11.com/admin/
+
+# Kredensial benar 200
+curl -s -o /dev/null -w "Benar: %{http_code}\n" -u 'prabs:pakar_pinter_jadi_gob***' http://www.k11.com/admin/
+
+# Isi file rahasia
+curl -s -u 'prabs:pakar_pinter_jadi_gob***' http://www.k11.com/admin/rahasia.txt
+
+# Path lain tetap jalan 
+curl -s -o /dev/null -w "Vault: %{http_code}\n" http://www.k11.com/arsip/
+
+```
+
+menghasilkan
+
+<img width="1330" height="511" alt="image" src="https://github.com/user-attachments/assets/b5627bd1-a4e7-4218-9860-4df7b5feb79c" />
+
+
