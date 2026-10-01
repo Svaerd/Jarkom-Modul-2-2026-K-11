@@ -1375,3 +1375,84 @@ nslookup -type=TXT beta.k11.com
 ![](./Attachments/image-2.webp)
 
 ### 18. Fake IP
+
+`ubah-prab.sh`
+```sh
+#!/bin/bash
+
+echo "[*] Mengubah Serial SOA dan A Record Abbey..."
+
+# 1. Menaikkan nilai Serial SOA (dari 2025010103 menjadi 2025010104)
+sed -i 's/2025010103/2025010104/' /etc/bind/db.k11.com
+
+# 2. Mengubah record abbey menjadi IP fiktif dengan TTL 15 detik
+# Regex ^abbey.* akan mencari baris yang diawali kata "abbey" dan menimpanya
+sed -i 's/^abbey.*/abbey   15      IN      A       10.88.88.88/' /etc/bind/db.k11.com
+
+# 3. Verifikasi sintaks zona
+named-checkzone k11.com /etc/bind/db.k11.com || {
+  echo "[FAIL] Zona error!"
+  exit 1
+}
+
+# 4. Terapkan perubahan tanpa mematikan layanan (reload)
+service named reload
+```
+![](./Attachments/image-3.webp)
+
+`test-cache.sh`
+```sh
+#!/bin/bash
+
+echo "[1] Cek IP sekarang (Efek Cache):"
+dig abbey.k11.com +short
+
+echo "[2] Menunggu 16 detik (Batas TTL)..."
+sleep 16
+
+echo "[3] Cek IP setelah TTL habis:"
+dig abbey.k11.com +short
+
+echo "[4] Cek sinkronisasi di Tedd (Slave DNS):"
+dig @10.69.3.11 abbey.k11.com +short
+```
+![](./Attachments/image-4.webp)
+
+### 19. Menambahkan CNAME record
+
+Untuk melakukan domain internal menuju domain external, dilakukan modifikasi pada file `/etc/bind/db.k11.com` melalui node `prab`, selaku master DNS:
+
+`add-cname.sh`
+```sh
+#!/bin/bash
+
+# menambahkan cname
+echo "outbound  IN  CNAME  http.badssl.com." >> /etc/bind/db.k11.com
+
+# Naikkan serial SOA agar tedd update datanya
+sed -i 's/2025010104/2025010105/' /etc/bind/db.k11.com
+
+# reload
+service named reload
+```
+
+Selanjutnya, kita `curl` untuk mengujinya
+```sh
+curl http://outbound.k11.com
+```
+
+![](./Attachments/image-5.webp)
+
+### 20. Always Ready
+Untuk memastikan sistem selalu siap setiap kali dilakukan refresh, kami menuliskan script pada setiap modul, sesuai dengan kebutuhan setupnya:
+![](./Attachments/image-6.webp)
+![](./Attachments/image-7.webp)
+![](./Attachments/image-8.webp)
+
+kemudian, script ini akan dipanggil melalui script node; disini kami menamakannya dengan nama masing-masing nodes. Seperti yang dapat dilihat pada contoh diatas, terdapat script `prab.sh`, `alpha.sh`, `penny.sh`, serta masih banyak lagi script lainnya yang tidak terlihat. Masing-masing nodes akan memiliki script ini. Tugasnya sendiri sangatlah sederhana, yaitu memanggil/menjalankan script lainnya.
+
+Kemudian, script pemanggil ini akan kami jalankan melalui configurasi masing-masing nodes:
+![](./Attachments/image-9.webp)
+
+Kami memutuskan menggunakan metode ini dikarenakan berdasarkan pengalaman kami, metode ini lebih kecil kemungkinan errornya. Sebelumnya kami telah mencoba untuk menjalankan setiap script melalui config masing-masing nodes. Akan tetapi, beberapa script atau command tidak mau berjalan dengan sempurna. Seperti, sempat kami alami, command untuk install program berjalan dengan baik, akan tetapi command untuk restart apache nya tidak berhasil.
+![](./Attachments/image-10.webp)
