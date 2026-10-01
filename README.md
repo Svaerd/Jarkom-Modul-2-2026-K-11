@@ -1333,3 +1333,16 @@ curl http://www.k11.com
 ```
 
 ![](./Attachments/screen-toolkit-annotate.webp)
+### 16. Bomb request stress test
+
+Jalankan script `apachebench.sh` pada salah satu node client, misalkan disini dijalankan pada alpha
+```sh
+apt update
+apt install -y apache2-utils
+
+ab -n 250 -c 10 http://www.k11.com/
+ab -n 250 -c 10 http://static.k11.com/
+```
+
+![](./Attachments/screen-toolkit-annotate-7.webp)
+
