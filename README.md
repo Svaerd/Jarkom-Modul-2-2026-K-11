@@ -1116,3 +1116,64 @@ curl -sI http://static.k11.com/ | head -3
 
 sudah terbukti dengan keluar http code 301 pada penny dan 302 pada abbey
 
+
+# Real IP Log
+
+Objektifnya yaitu agar apache log dan nginx log mencatat IP real dari client asli, bukan dari proxy , berdasarkan soal sebelumnya header X-1P dan X-Forward akan ditampilkan di alpha misal iya menampilkan IP dari proxy misal 10.69.4.10 dari penny, namun di soal ini diharapkan untuk menampilkan IP asli clientnya
+
+dan juga berdampak pada log nya , log nya diharapkan juga menampilkan IP asli dari client yang mengakses
+
+pertama , ubah konfigurasi dari apache atau obladi dan desmond, menggunakan util apache remoteip dan remote header nya di set ke X-Real-IP , kemudian format log nya di ubah juga di `/etc/apache2/apache2.conf`
+
+
+*Obladi & Desmond*
+```sh
+a2enmod remoteip
+
+cat > /etc/apache2/conf-available/remoteip.conf <<'EOF'
+RemoteIPHeader X-Real-IP
+RemoteIPInternalProxy 10.69.4.10
+RemoteIPInternalProxy 10.69.2.10
+EOF
+
+a2enconf remoteip
+
+# Ganti LogFormat: %a → %{X-Real-IP}i
+sed -i 's|LogFormat "%a %l %u %t|LogFormat "%{X-Real-IP}i %l %u %t|' /etc/apache2/apache2.conf
+
+apache2ctl configtest
+service apache2 restart
+```
+ kalau di nginx core , tinggal setrealip di file `/etc/nginx/conf.d/realip.conf` dan restart lagi nginx nya
+
+*Oblada & Molly*
+
+```sh
+cat > /etc/nginx/conf.d/realip.conf <<'EOF'
+set_real_ip_from 10.69.4.10;
+set_real_ip_from 10.69.2.10;
+real_ip_header X-Real-IP;
+real_ip_recursive on;
+EOF
+
+nginx -t
+service nginx restart
+```
+
+dari client jalankan
+
+```sh
+curl -s http://www.k11.com/arsip/ > /dev/null
+curl -s http://static.k11.com/ > /dev/null
+```
+
+
+cek log di server server nya
+
+```sh
+# Cek log
+tail -1 /var/log/apache2/access.log   # vault
+tail -1 /var/log/nginx/access.log     # core
+```
+
+
