@@ -33,23 +33,11 @@ Disarankan menggunakan >= php8.4-fpm.
 
 ![](./Attachments/image-1.webp)
 
-### 2. Set IP VPC
+Sesuai dengan arahan soal nomor 1, kita akan menetapkan IP address dan default gateway untuk router (`rootkit`) dan seluruh entitas dalam jaringan.
 
-Router config:
+Konfigurasi IP pada Router `rootkit`:
 
 ```
-auto eth0
-iface eth0 inet dhcp
-
-up sysctl -w net.ipv4.ip_forward=1
-up iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
-up iptables -A FORWARD -i eth1 -o eth0 -j ACCEPT
-up iptables -A FORWARD -i eth2 -o eth0 -j ACCEPT
-up iptables -A FORWARD -i eth3 -o eth0 -j ACCEPT
-up iptables -A FORWARD -i eth4 -o eth0 -j ACCEPT
-up iptables -A FORWARD -i eth5 -o eth0 -j ACCEPT
-up iptables -A FORWARD -i eth0 -m state --state ESTABLISHED,RELATED -j ACCEPT
-
 auto eth1
 iface eth1 inet static
 address 10.69.1.1
@@ -76,7 +64,7 @@ address 10.69.5.1
 netmask 255.255.255.0
 ```
 
-> Config masing-masing clients: assigning Clients IP
+> Config masing-masing clients: assigning Clients IP & Gateway
 
 - delta
 
@@ -169,7 +157,7 @@ netmask 255.255.255.0
 gateway 10.69.3.1
 ```
 
-- redd
+- tedd
 
 ```
 auto lo
@@ -245,6 +233,28 @@ iface eth0 inet static
 address 10.69.1.10
 netmask 255.255.255.0
 gateway 10.69.1.1
+```
+
+![](./Attachments/screen-toolkit-annotate-9.webp)
+
+### 2. Set NAT di Router
+
+Sesuai dengan soal nomor 2, kita akan membuka jalur NAT pada antarmuka WAN `rootkit` agar host internal dapat terhubung ke internet.
+
+Konfigurasi NAT pada `rootkit`:
+
+```
+auto eth0
+iface eth0 inet dhcp
+
+up sysctl -w net.ipv4.ip_forward=1
+up iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+up iptables -A FORWARD -i eth1 -o eth0 -j ACCEPT
+up iptables -A FORWARD -i eth2 -o eth0 -j ACCEPT
+up iptables -A FORWARD -i eth3 -o eth0 -j ACCEPT
+up iptables -A FORWARD -i eth4 -o eth0 -j ACCEPT
+up iptables -A FORWARD -i eth5 -o eth0 -j ACCEPT
+up iptables -A FORWARD -i eth0 -m state --state ESTABLISHED,RELATED -j ACCEPT
 ```
 
 ![](./Attachments/screen-toolkit-annotate-2.webp)
@@ -325,8 +335,8 @@ dig -4 @localhost k11.com SOA +short
 Verifikasi dari client (alpha), setelah resolver di set di `/etc/network/interfaces` sesuai section 3:
 
 ```
-dig @10.69.3.10 k11.com +short     # harus 10.69.4.10
 dig @10.69.3.11 prab.k11.com +short # harus 10.69.3.10
+dig @10.69.3.10 k11.com +short     # harus 10.69.4.10
 ```
 
 <img width="646" height="241" alt="image" src="https://github.com/user-attachments/assets/eb115a3f-6170-4b3f-b1c2-f94d9b1d92ec" />
@@ -359,7 +369,7 @@ up echo "nameserver 192.168.122.1" >> /etc/resolv.conf
 
 `installbind.sh`
 
-Untuk menambahkan subdomain dan mengkoneksikannya dengan IP address sesuai node dan glosarium makan script `dns-zone.sh` di prab akan menambahkan beberapa A record pada `/db.k11.com` sehingga menjadi
+Untuk menambahkan subdomain dan mengkoneksikannya dengan IP address sesuai node dan glosarium maka script `installbind.sh` di prab akan menambahkan beberapa A record pada `/db.k11.com` sehingga menjadi
 
 ```sh
 #!/bin/bash
@@ -547,6 +557,7 @@ cat /etc/resolv.conf
 
 Untuk memastikan tedd telah menerima salinan zona terbaru dari prabb, jalankan script dibawah ini pada container tedd:
 
+`cek-zona-transfer.sh`
 ```sh
 #!/bin/bash
 echo "Membandingkan Serial SOA"
@@ -1420,7 +1431,7 @@ dig @10.69.3.11 abbey.k11.com +short
 
 ### 19. Menambahkan CNAME record
 
-Untuk melakukan domain internal menuju domain external, dilakukan modifikasi pada file `/etc/bind/db.k11.com` melalui node `prab`, selaku master DNS:
+Untuk melakukan binding domain internal menuju domain external, dilakukan modifikasi pada file `/etc/bind/db.k11.com` melalui node `prab`, selaku master DNS:
 
 `add-cname.sh`
 ```sh
@@ -1444,7 +1455,7 @@ curl http://outbound.k11.com
 ![](./Attachments/image-5.webp)
 
 ### 20. Always Ready
-Untuk memastikan sistem selalu siap setiap kali dilakukan refresh, kami menuliskan script pada setiap modul, sesuai dengan kebutuhan setupnya:
+Untuk memastikan sistem selalu siap setiap kali dilakukan refresh, kami menuliskan script pada `root` directory setiap modul (karena file yang diletakkan disana tidak akan terhapus bila terjadi restart), sesuai dengan kebutuhan setupnya:
 ![](./Attachments/image-6.webp)
 ![](./Attachments/image-7.webp)
 ![](./Attachments/image-8.webp)
